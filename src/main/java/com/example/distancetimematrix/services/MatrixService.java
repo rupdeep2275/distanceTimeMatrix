@@ -2,24 +2,40 @@ package com.example.distancetimematrix.services;
 
 import com.example.distancetimematrix.dtos.MatrixRequest;
 import com.example.distancetimematrix.dtos.MatrixResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.ResponseEntity;
+
 @Service
 public class MatrixService {
-    private final WebClient webClient;
 
-    public MatrixService(WebClient.Builder webClientBuilder) {
-        this.webClient = webClientBuilder.baseUrl("https://graphhopper.com/api/1/matrix?key=65486ad0-eab2-452b-9a0c-db8d938b9b44").build();
-    }
+    @Autowired
+    private RestTemplate restTemplate;
+
+    @Value("${graphHopperApikey}")
+    private String key;
+
 
     public MatrixResponse calculateMatrix(MatrixRequest matrixRequest) {
-        return webClient
-                .post()
-//                .uri("/matrix")
-                .body(BodyInserters.fromValue(matrixRequest))
-                .retrieve()
-                .bodyToMono(MatrixResponse.class)
-                .block();
+        String url = "https://graphhopper.com/api/1/matrix?key=" + key;
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<MatrixRequest> requestEntity = new HttpEntity<>(matrixRequest, headers);
+
+        ResponseEntity<MatrixResponse> responseEntity = restTemplate.exchange(
+                url,
+                HttpMethod.POST,
+                requestEntity,
+                MatrixResponse.class
+        );
+
+        if (responseEntity.getStatusCode() == HttpStatus.OK) {
+            return responseEntity.getBody();
+        } else {
+            return null;
+        }
     }
 }
